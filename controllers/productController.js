@@ -3,6 +3,7 @@ const Product = require("../models/productModel")
 const ErrorHandler = require("../utils/errorhandler")
 const {mongodbObjId} = require("../middleware/error")
 const { isValidObjectId } = require("mongoose")
+const ApiFeatures = require("../utils/apiFeatures")
 
 // create Product 
 // admin 
@@ -23,17 +24,25 @@ try{
 
 
 // get all products 
-exports.getAllProducts = async (req,res)=>{
-    try{
-      
-const products = await Product.find()
 
-res.status(200).send({status:true , products})
+exports.getAllProducts = async (req,res)=>{ 
+    try{
+
+        const resultPerPage = 5
+
+const productCount = await Product.countDocuments()
+
+     const apiFeatures = new ApiFeatures(Product.find(), req.query)
+     .search().filter().pagination(resultPerPage)
+    
+
+    const products = await apiFeatures.query
+
+    res.status(200).send({status:true , products , productCount})
     
     }catch(err){
         res.status(500).send({status:false , message:err.message})
     }
-
 
 }
 
@@ -91,7 +100,7 @@ try{
     if(!isValidObjectId(req.params.id)){
         return  res.status(400).send({status:false , message:"Not valid Object Id"})
       }
-      
+
     const product = await Product.findById(req.params.id)
     if(!product){
         return next(new ErrorHandler("product not found", 404))

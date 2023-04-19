@@ -14,7 +14,7 @@ description:{
     required:[true, "Please Enter product description"]
 },
 price:{
-    type:Number,
+    type:Number ,
     required:[true, "Please Enter product Price"],
     maxLength:[8,"price cannot exceed 8 characters"]
 }, 
