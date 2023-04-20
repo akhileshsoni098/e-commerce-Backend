@@ -7,7 +7,7 @@ const connectDatabase = ()=>{
 
 .then(()=>{console.log("mongoDb is connected....")})
 
-}
+} 
 
 
 module.exports = connectDatabase ;
