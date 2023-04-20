@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 
 
+
 const userSchema = new mongoose.Schema({
 
 name:{
@@ -44,7 +45,8 @@ avatar:{
     resetPasswordExpire:Date,
 
 })
-// hashing password ...
+
+// ============================= hashing password =============================
 userSchema.pre("save", async function(next){
 
 if(!this.isModified("password")){
@@ -54,7 +56,7 @@ if(!this.isModified("password")){
     this.password = await bcrypt.hash(this.password,10)
 })
 
-// jwt token 
+//=========================== jwt token ================================================
 
 userSchema.methods.getJWTToken = function (){
     return jwt.sign({id:this._id}, process.env.JWT_SECRET,{
@@ -63,6 +65,17 @@ userSchema.methods.getJWTToken = function (){
     })
 
 }
+
+//================================ compare password or dcrypting password  ========================
+
+userSchema.methods.comparePassword = async function (enteredPassword){
+    console.log(enteredPassword, +  "||" + this.password)
+    return (await bcrypt.compare(enteredPassword, this.password))
+  
+}
+
+//========================== Generating Password Reset Token ======================
+
 
 
 

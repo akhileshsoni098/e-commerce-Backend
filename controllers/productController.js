@@ -5,17 +5,23 @@ const ErrorHandler = require("../utils/errorhandler")
 const { isValidObjectId } = require("mongoose")
 const ApiFeatures = require("../utils/apiFeatures")
 
-// create Product 
-// admin 
+//============================== create Product Admin ========================
 
 exports.createProduct = async (req, res, next)=>{
 try{
+
+    //========== userId  decoded token ================
+
+    req.body.user = req.user.id
+
     const product = await Product.create(req.body)
 
     res.status(201).send({status:true , product})
 
 }catch(err){
+
     res.status(500).send({status:false , message:err.message})
+
 }
   
 }
@@ -23,7 +29,7 @@ try{
 
 
 
-// get all products 
+//===================== get all products ============================
 
 exports.getAllProducts = async (req,res)=>{ 
     try{
@@ -46,7 +52,7 @@ const productCount = await Product.countDocuments()
 
 }
 
-//=== get product data
+//================ get product data ===================================
 
 exports.getProductDetails = async (req,res, next)=>{
     try{
@@ -68,7 +74,7 @@ res.status(200).send({status:true, product})
 }
 
 
-// update product ...admin
+//======================== update product admin ==============================
 
 
 exports.updateProduct = async(req,res,next)=>{
@@ -92,7 +98,7 @@ res.status(200).send({status:true , product})
    
 }
 
-// ====================delete admin  
+// ======================== delete admin ========================================
 
 
 exports.deleteProduct = async(req, res , next)=>{
@@ -114,3 +120,9 @@ res.status(200).send({status:false , message:"product deleted successfully"})
         res.status(500).send({status:false , message:err.message})
     }
 }
+
+
+
+
+
+

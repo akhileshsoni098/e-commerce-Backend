@@ -1,10 +1,15 @@
+
+// building api features search filter and pagination .....
+
+
 class ApiFeatures {
     constructor(query, queryStr){
         this.query = query;
         this.queryStr = queryStr
     }
-
+// ================================  Search features  ===================================
     search(){
+        // **need to understand this how it's working ...
         const keyword = this.queryStr.keyword ? {
             name:{
                 $regex: this.queryStr.keyword,
@@ -12,33 +17,36 @@ class ApiFeatures {
             }
         }:{}
 
-        // console.log(keyword)
-        
         this.query = this.query.find({...keyword})
         return this;
     }
 
+// ==================================  filter Category features  ======================================================
+
 filter(){
     const queryCopy = { ...this.queryStr }
 
-
-    // Removing some fields for category
+//=========   Removing some fields for category   ==========
 
     const removeFields = ["keyword", "page", "limit"]
     removeFields.forEach((key) => delete queryCopy[key])
     
 
-    //filtter for price and rating 
-    // console.log(queryCopy)
+    //========================  filtter for price and rating   =======================================================
+
+//  **  need to understand 
     let queryStr = JSON.stringify(queryCopy)
 
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, key => `$${key}`)
  
     this.query = this.query.find(JSON.parse(queryStr))
-    // console.log(queryStr) 
+
     return this;  
 
 }
+
+//========================================= Pagination Features ==============================================
+
 pagination(resultPerPage){
 
     const currentPage = Number(this.queryStr.page) || 1;
