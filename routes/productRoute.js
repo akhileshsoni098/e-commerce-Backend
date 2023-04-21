@@ -17,7 +17,7 @@ router.route("/product/new").post( isAuthenticatedUser, authorizeRoles("admin") 
 
 //====================================== get product ============================================================
 
-router.route("/product").get( getAllProducts)
+router.route("/product").get(isAuthenticatedUser, getAllProducts)
 
 //======================================== update product (admin) =======================================================
 

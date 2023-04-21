@@ -57,7 +57,7 @@ pagination(resultPerPage){
 
     return this  
 
-}
+} 
 
 }
 

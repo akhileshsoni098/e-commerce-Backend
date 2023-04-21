@@ -9,6 +9,11 @@ module.exports = (err , req, res, next)=>{
 
     err.message = err.message || "Internal Server Error"
  
+    // ====== mongoose duplicate key error ........
+if(err.code === 11000){
+    const message = `Duplicate ${Object.keys(err.keyValue)} Entered`
+    err = new ErrorHandler(message, 400)
+}
 
     
 // wrong mongodb Id error 
@@ -19,5 +24,8 @@ module.exports = (err , req, res, next)=>{
 
     res.status(err.statusCode).json({staus:false , message: err.message})
 } 
+
+
+
 
 

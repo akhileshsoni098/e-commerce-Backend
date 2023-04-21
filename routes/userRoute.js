@@ -4,7 +4,9 @@
 
 
 const express = require("express")
-const { registerUser, loginUser, logout } = require("../controllers/userController")
+const { registerUser, loginUser, logout, forgotPassword, resetPassword, getUserDetails, updatePassword, updateProfile, getAllUser, getSingleUser } = require("../controllers/userController")
+const { isAuthenticatedUser, authorizeRoles } = require("../middleware/auth")
+
 
 const router = express.Router()
 
@@ -16,10 +18,38 @@ router.route("/register").post(registerUser)
 
 router.route("/login").post(loginUser)
 
+//====================== Forgot Password ================================
+
+router.route("/password/forgot").post(forgotPassword)
+
+//====================== reset Password ================================
+
+router.route("/password/reset/:token").put(resetPassword)
+
 //===================== logout User/admin =================================================
 
-router.route("/logout").get(logout)
+router.route("/logout").get(logout) 
+
+// ========================== get user Details ====================
+
+router.route("/me").get( isAuthenticatedUser, getUserDetails)
+
+// ======================== update password ===========
+
+router.route("/password/update").put(isAuthenticatedUser, updatePassword)
+
+// ======================== update user Profile  =====================
+
+router.route("/me/update").put(isAuthenticatedUser, updateProfile)
+
+//===================== get all Users ===========================
+router.route("/admin/users").get(isAuthenticatedUser,authorizeRoles("admin"), getAllUser)
+
+// ======= get single User ===========================
+router.route("/admin/user/:id").get(isAuthenticatedUser,authorizeRoles("admin"), getSingleUser)
 
 
 
-module.exports = router 
+
+
+module.exports = router  

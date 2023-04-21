@@ -73,6 +73,6 @@ createdAt:{
 }
 
 
- })
+ }) 
 
  module.exports = mongoose.model("product", productSchema)

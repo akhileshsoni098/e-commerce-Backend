@@ -14,11 +14,18 @@ if(!token){
     return next(new ErrorHandler("Please login to access this resource", 401))
 }
 
-const decoded = jwt.verify(token, process.env.JWT_SECRET)
+ jwt.verify(token, process.env.JWT_SECRET, async function(err, decoded){
 
-  req.user =  await User.findById(decoded.id)
+if(err) return res.status(400).send({status:false , message:err.message})
 
-  next()
+else{
+    req.user = await User.findById(decoded.id)
+    console.log(req.user.name , req.user.email)
+
+    next()
+}
+
+})
 
     }catch(err){
         res.status(500).send({status:false, message:err.message})
