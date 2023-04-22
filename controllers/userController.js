@@ -269,11 +269,6 @@ exports.updatePassword = async (req,res,next) =>{
 
 //==================== Update user Profile=======================
 
-
-
-
-
-
 exports.updateProfile = async (req,res,next) =>{
     try{
 
@@ -282,13 +277,13 @@ const newUserData = {
     name:req.body.name,
     email:req.body.email,
 }
-      // we will add cloudinary later
+      // we will add cloudinary later  
 
 
 const user = await User.findByIdAndUpdate(req.user.id, newUserData, {new:true, runValidators:true, useFindAndModify:false,})
 
 
-res.status(200).send({status:true, user})
+res.status(200).send({status:true })
 
     }catch(err){
 
@@ -341,5 +336,56 @@ exports.getSingleUser = async (req,res,next)=>{
 
 
 
+
+
+//==================== Update user  Role (admin)=======================
+
+exports.updateUserRole = async (req,res,next) =>{
+    try{
+
+    
+const newUserData = {
+    name:req.body.name,
+    email:req.body.email,
+    role:req.body.role
+}
+const user = await User.findByIdAndUpdate(req.user.id, newUserData, {new:true, runValidators:true, useFindAndModify:false,})
+
+res.status(200).send({status:true})
+
+    }catch(err){
+
+    res.status(500).send({status:false , message:err.message})
+
+}
+
+}
+
+
+
+
+
+//==================== Delete user  (admin)=======================
+
+exports.deleteUser = async (req,res,next) =>{
+    try{
+
+const user = await User.findById(req.params.id)
+//we will remove cloudinary later
+if(!user){
+    return next (new ErrorHandler(`User does not exist with id:${req.params.id}`))
+}
+await User.findByIdAndDelete(req.params.id)
+
+
+res.status(200).send({status:true, message:"User Deletted Successfully "  })
+
+    }catch(err){
+
+    res.status(500).send({status:false , message:err.message})
+
+}
+
+}
 
 
