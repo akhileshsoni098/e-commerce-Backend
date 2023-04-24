@@ -16,7 +16,7 @@ if(!token){
 
  jwt.verify(token, process.env.JWT_SECRET, async function(err, decoded){
 
-if(err) return res.status(400).send({status:false , message:err.message})
+if(err) return  await res.status(400).send({status:false , message:err.message})
 
 else{
     req.user = await User.findById(decoded.id)

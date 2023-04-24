@@ -81,7 +81,7 @@ if(!isPasswordMatched){
 
 sendToken(user,200,res)
 
-}catch(err){
+}catch(err){ 
 
     res.status(500).send({status:false , message:err.message})
 
@@ -170,7 +170,7 @@ res.status(200).send({status:true, message: `Email sent to ${user.email} success
 
 }
 
-}
+} 
 
 // console.log(forgotPassword)
 
@@ -271,15 +271,18 @@ exports.updatePassword = async (req,res,next) =>{
 
 exports.updateProfile = async (req,res,next) =>{
     try{
-
+        let data = req.body
+let {name , email} = data
     
 const newUserData = {
-    name:req.body.name,
-    email:req.body.email,
+    name:name,
+    email:email,
 }
       // we will add cloudinary later  
-
-
+const checkEmail = await User.findOne({email:email})
+if(checkEmail){
+    return next(new ErrorHandler("This Email is already exist", 400))
+}
 const user = await User.findByIdAndUpdate(req.user.id, newUserData, {new:true, runValidators:true, useFindAndModify:false,})
 
 
@@ -343,12 +346,21 @@ exports.getSingleUser = async (req,res,next)=>{
 exports.updateUserRole = async (req,res,next) =>{
     try{
 
-    
-const newUserData = {
-    name:req.body.name,
-    email:req.body.email,
-    role:req.body.role
-}
+        let data = req.body
+        let {name , email, role} = data
+            
+        const newUserData = {
+            name:name,
+            email:email,
+            role:role
+        }
+              // we will add cloudinary later  
+              
+        const checkEmail = await User.findOne({email:email})
+        if(checkEmail){
+            return next(new ErrorHandler("This Email is already exist", 400))
+        }
+
 const user = await User.findByIdAndUpdate(req.user.id, newUserData, {new:true, runValidators:true, useFindAndModify:false,})
 
 res.status(200).send({status:true})

@@ -199,11 +199,8 @@ try{
 }
 
 
-
-
-
-
 // =========== Delete Reviews ====================
+
 
 exports.deleteReview = async (req,res,next) => {
     try{
@@ -217,25 +214,26 @@ const reviews = product.reviews.filter( rev => rev._id.toString() !== req.query.
 
 
 // === avg rating get effected when rating deleted ...
+
 let avg = 0
 
 reviews.forEach((rev) =>{
     avg += rev.rating
 })
 
- const  ratings = avg/ reviews.length
+ const  ratings = avg/reviews.length
 
 const numOfReviews = reviews.length
 
 await Product.findByIdAndUpdate(req.query.productId,{ reviews, ratings, numOfReviews},{new:true, runValidators:true, useFindAndModify:false })
 
-        res.status(200).send({
+ res.status(200).send({
             status:true
         })
-    
-    }catch(err){
+
+ }catch(err){
         res.status(500).send({status:false , message:err.message})
-    }
+  }
     }
 
 

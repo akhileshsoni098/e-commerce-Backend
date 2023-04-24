@@ -22,7 +22,7 @@ ratings:{
     type:Number,
     default:0
 },
-image:[
+images:[
     {
     public_id:{
 type:String,
@@ -38,7 +38,7 @@ category:{
     type:String,
     required:[true,"Please Enter Product Category"]
 },
-stock:{
+Stock:{
     type:Number,
     required:[true, "Please Enter product Stock"],
     maxLength:[4 , "Stock cannot exceed 4 characters"],
@@ -74,10 +74,9 @@ user:{
 
 createdAt:{
     type:Date,
-    default:Date.now
+    default:Date.now()
 }
-
 
  }) 
 
- module.exports = mongoose.model("product", productSchema)
+ module.exports = mongoose.model("Product", productSchema)
