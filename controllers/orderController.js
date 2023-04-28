@@ -67,9 +67,10 @@ exports.myOrders = async (req, res, next) => {
     try {
 
       const orders = await Order.find({user:req.user.id})
-  // if(orders.length==0) {
-  //   return   next(new ErrorHandler("Order not found with this id", 400))
-  // }
+
+  if(orders.length==0) {
+    return   next(new ErrorHandler("Order not found with this id", 400))
+  }
       res.status(200).send({ 
         status: true,
         orders,
@@ -114,27 +115,26 @@ exports.updateOrder = async (req, res, next) => {
 
     const order = await Order.findById(req.params.id)
 
-// if(order.length==0) {
-//   return   next(new ErrorHandler("Order not found with this id", 400))
-// }
+if(!order) {
+  return   next(new ErrorHandler("Order not found with this id", 400))
+}
 
 if(order.orderStatus==="Delivered"){
   return next(new ErrorHandler("you have already delivered this order", 400))
 }
 
-order.orderItems.forEach(async (order) =>{
- await  updateStock(order.product, order.quantity);
-})
+if (req.body.status === "Shipped") {
+  order.orderItems.forEach(async (o) => {
+    await updateStock(o.product, o.quantity);
+  });
+}
+order.orderStatus = req.body.status;
 
-order.orderStatus = req.body.status
-
-
-if(req.body.status == "Delivered"){
-  order.deliveredAt = Date.now()
+if (req.body.status === "Delivered") {
+  order.deliveredAt = Date.now();
 }
 
-
-await order.save({validateBeforeSave:false})
+await order.save({ validateBeforeSave: false });
 
     res.status(200).send({ 
       status: true,
@@ -145,11 +145,14 @@ await order.save({validateBeforeSave:false})
   }
 };
 
+
+
+
 // ===== update stock function for above api ====
 async function updateStock(id,quantity){
 
   const product = await Product.findById(id)
-console.log(product.stock)
+console.log(product.Stock)
 product.Stock -= quantity
 
 await product.save({validateBeforeSave:false})
@@ -162,12 +165,14 @@ await product.save({validateBeforeSave:false})
 
 
 exports.deleteOrder = async (req, res, next) => {
+
   try {
 
     const order = await Order.findById(req.params.id)
 
-if(order.length==0){
-  return   next(new ErrorHandler("Order not found with this id", 400))
+if(!order){
+  
+  return next(new ErrorHandler("Order not found with this id", 400))
 }
 
 await Order.findByIdAndDelete(req.params.id)

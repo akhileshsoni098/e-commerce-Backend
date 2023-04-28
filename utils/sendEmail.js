@@ -10,7 +10,7 @@ const sendEmail = async (options) => {
         // secure: false,
         auth:{
             user:process.env.SMPT_MAIL,
-            pass:process.env.SMPT_PASSWORD
+            pass:process.env.SMPT_PASSWORD,
         }
     })
    

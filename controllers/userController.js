@@ -1,403 +1,336 @@
-const ErrorHandler = require("../utils/errorhandler")
-const { isValidObjectId } = require("mongoose")
-const User = require("../models/userModel")
-const sendToken = require("../utils/jwtToken")
-const crypto = require("crypto")
-const sendEmail = require("../utils/sendEmail")
-
-
-
-
+const ErrorHandler = require("../utils/errorhandler");
+const { isValidObjectId } = require("mongoose");
+const User = require("../models/userModel");
+const sendToken = require("../utils/jwtToken");
+const crypto = require("crypto");
+const sendEmail = require("../utils/sendEmail");
+const cloudinary = require("cloudinary");
 //========================== Register User ========================
 
-exports.registerUser = async (req,res,next)=>{
+exports.registerUser = async (req, res, next) => {
+  try {
+    const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+      folder: "avatars",
+      width: 150,
+      crop: "scale",
+    });
 
-try{
-
-    const {name, email, password} = req.body
-
-   
-    const checkEmail = await User.findOne({email:email})
-
-    if(checkEmail){
-        const message = `This Email is alredy exist`
-        return next(new ErrorHandler(message,404 ))
-    }
-    
+    const { name, email, password } = req.body;
 
     const user = await User.create({
+      name,
+      email,
+      password,
+      avatar: {
+        public_id: myCloud.public_id,
+        url: myCloud.secure_url,
+      },
+    });
 
-        name,email,password,
-
-       avatar:{   
-            public_id:"this is a sample id",
-            url:"profilepicUrl"
-        }
-
-    })
-    
-    sendToken(user,201,res)
-
-}catch(err){
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-
-}
-
+    sendToken(user, 201, res);
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 // ========================== Log In User ==========================
 
+exports.loginUser = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
 
-exports.loginUser = async (req,res,next)=>{
+    // checking if user has given password and email both
 
-    try{
+    if (!email || !password) {
+      return next(new ErrorHandler("Please Enter Email & Password", 400));
+    }
 
-const {email, password} = req.body
+    const user = await User.findOne({ email }).select("+password"); // in model select is false so that...
 
- // checking if user has given password and email both
+    if (!user) {
+      return next(new ErrorHandler("Invalid email or password", 401));
+    }
 
- if(!email || !password){
+    const isPasswordMatched = await user.comparePassword(password);
 
-    return next(new ErrorHandler("Please Enter Email & Password", 400))
- }
+    if (!isPasswordMatched) {
+      return next(new ErrorHandler("Invalid email or password", 401));
+    }
 
- const user = await User.findOne({email}).select("+password")  // in model select is false so that...
-
-if(!user){
-
-    return next(new ErrorHandler("Invalid email or password", 401))
-
-}
-
-const isPasswordMatched = await user.comparePassword(password)
-
-if(!isPasswordMatched){
-
-    return next(new ErrorHandler("Invalid email or password", 401))
-
-}
-
-sendToken(user,200,res)
-
-}catch(err){ 
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-}
+    sendToken(user, 200, res);
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 //=================================== LogOut User ================================================
 
-exports.logout = async (req, res, next)=>{
+exports.logout = async (req, res, next) => {
+  try {
+    res.cookie("token", null, {
+      expires: new Date(Date.now()),
 
-try{
+      httpOnly: true,
+    });
 
-    res.cookie("token" , null, {
-
-        expires: new Date(Date.now()),
-
-        httpOnly:true
-
-    })
-
-    res.status(200).send({status:true , message:"Logged Out"})
-
-}catch(err){
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-
-}
-
+    res.status(200).send({ status: true, message: "Logged Out" });
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 // ====================================== forgot password =============================
 
-exports.forgotPassword = async(req,res,next)=>{
-try{
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
 
-const user = await User.findOne({email:req.body.email})
+    if (!user) {
+      return next(new ErrorHandler("User not found", 404));
+    }
 
-if(!user){
-    return next(new ErrorHandler("User not found",404 ))
-}
+    // get resetPassword Token
 
-// get resetPassword Token 
+    const resetToken = user.getResetPasswordToken();
 
-const resetToken =  user.getResetPasswordToken();
-// console.log(    'reset pass'  ,resetToken)
-  await user.save({validateBeforeSave:false})
+    await user.save({ validateBeforeSave: false });
 
-const resetPasswordUrl = `${req.protocol}://${req.get("host")}/api/v1/password/reset/${resetToken}`
+    const resetPasswordUrl = `${req.protocol}://${req.get(
+      "host"
+    )}/api/v1/password/reset/${resetToken}`;
 
+    const message = `Your password reset token is :- \n\n  ${resetPasswordUrl} \n\n If you have not requested this email then, please ignore it `;
 
-const message = `Your password reset token is :- \n\n  ${resetPasswordUrl} \n\n If you have not requested this email then, please ignore it `;
+    //=============== send email to confirm user to reset password  ======
+    try {
+      await sendEmail({
+        email: user.email,
 
+        subject: `Ecommerce Password Recovery`,
 
-//=============== send email to confirm user to reset password  ====== 
-try{
+        message,
+      });
+      // console.log(sendEmail.email)
 
- await sendEmail({
+      res.status(200).send({
+        status: true,
+        message: `Email sent to ${user.email} successfully`,
+      });
+    } catch (err) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
 
-email: user.email,
+      await user.save({ validateBeforeSave: false });
 
-subject: `Ecommerce Password Recovery`,
+      return next(new ErrorHander(error.message, 500));
+    }
 
-message,
-
-})
-// console.log(sendEmail.email)
-
-res.status(200).send({status:true, message: `Email sent to ${user.email} successfully` })
-
-}catch(err){
-
-   user.resetPasswordToken = undefined;
-   user.resetPasswordExpire = undefined;
-
-   await user.save({validateBeforeSave:false})
-
-   return res.status(500).send({status:false , message:err.message})
-
-}
-
-//=====================
-}catch(err){
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-
-} 
+    //=====================
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 // console.log(forgotPassword)
 
+//=============== Reset Password  ========================
 
-// Reset Password 
+exports.resetPassword = async (req, res, next) => {
+  try {
+    // creating token hash
+    const resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(req.params.token)
+      .digest("hex");
 
-exports.resetPassword = async (req, res, next)=>{
-    try{
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
 
-        // creating token hash 
-        const resetPasswordToken = crypto.createHash("sha256").update(req.params.token).digest("hex")
+    if (!user) {
+      return next(
+        new ErrorHandler(
+          "Reset Password Token is invalid or has been expired",
+          400
+        )
+      );
+    }
 
-        const user = await User.findOne({
-            resetPasswordToken,
-            resetPasswordExpire: {$gt: Date.now()},
+    if (req.body.password !== req.body.confirmPassword) {
+      return next(new ErrorHandler("Password doesn't match", 400));
+    }
 
-        })
+    user.password = req.body.password;
 
-        if(!user){
-            return next(new ErrorHandler("Reset Password Token is invalid or has been expired",404 ))
-        }
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
 
-if(req.body.password !== req.body.confirmPassword){
-    return next (new ErrorHandler("Password doesn't match",400))
-}
+    await user.save();
+    sendToken(user, 200, res);
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
-user.password = req.body.password
+//================== get user Details ====================
 
-user.resetPasswordToken = undefined;
-user.resetPasswordExpire = undefined;
+exports.getUserDetails = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id); // id becoz login payload me id liya h
 
-await user.save()
-sendToken(user,200,res)
-
-    }catch(err){
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-}
-
-// get user Details 
-
-exports.getUserDetails = async (req, res, next)=>{
-
-try{
-
-const user = await User.findById(req.user.id)  // id becoz login payload me id liya h 
-
-res.status(200).send({staus:true , user,})
-
-
-}catch(err){
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-
-}
-
-
-
+    res.status(200).send({ staus: true, user });
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 // ====== update user password  =====
 
-exports.updatePassword = async (req,res,next) =>{
-    try{
+exports.updatePassword = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select("+password");
 
-        const user = await User.findById(req.user.id).select("+password")
+    const isPasswordMatched = await user.comparePassword(req.body.oldPassword);
 
-        const isPasswordMatched = await user.comparePassword(req.body.oldPassword)
+    if (!isPasswordMatched) {
+      return next(new ErrorHandler("Old password is incorrect", 400));
+    }
 
-        if(!isPasswordMatched) {
-            return next(new ErrorHandler("Old password is incorrect", 400))
-        }
+    if (req.body.newPassword !== req.body.confirmPassword) {
+      return next(new ErrorHandler("password doesn't match ", 400));
+    }
 
-        if(req.body.newPassword !== req.body.confirmPassword){
-            return next(new ErrorHandler("password doesn't match ", 400))
-        }
+    user.password = req.body.newPassword;
 
-       user.password = req.body.newPassword
+    await user.save();
 
-      await user.save()
-
-      sendToken(user, 200, res)
-
-    }catch(err){
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-
-}
-
-
+    sendToken(user, 200, res);
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 //==================== Update user Profile=======================
 
-exports.updateProfile = async (req,res,next) =>{
-    try{
-        let data = req.body
-let {name , email} = data
-    
-const newUserData = {
-    name:name,
-    email:email,
-}
-      // we will add cloudinary later  
-const checkEmail = await User.findOne({email:email})
-if(checkEmail){
-    return next(new ErrorHandler("This Email is already exist", 400))
-}
-const user = await User.findByIdAndUpdate(req.user.id, newUserData, {new:true, runValidators:true, useFindAndModify:false,})
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const newUserData = {
+      name: req.body.name,
+      email: req.body.email,
+    };
 
+    if (req.body.avatar !== "") {
+      const user = await User.findById(req.user.id);
 
-res.status(200).send({status:true })
+      const imageId = user.avatar.public_id;
 
-    }catch(err){
+      await cloudinary.v2.uploader.destroy(imageId);
 
-    res.status(500).send({status:false , message:err.message})
+      const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+        folder: "avatars",
+        width: 150,
+        crop: "scale",
+      });
 
-}
+      newUserData.avatar = {
+        public_id: myCloud.public_id,
+        url: myCloud.secure_url,
+      };
+    }
 
-}
+    const user = await User.findByIdAndUpdate(req.user.id, newUserData, {
+      new: true,
+      runValidators: true,
+      useFindAndModify: false,
+    });
 
+    res.status(200).send({ status: true });
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 //=============================== get all Users ====================
-exports.getAllUser = async (req,res,next)=>{
-try{
+exports.getAllUser = async (req, res, next) => {
+  try {
+    const users = await User.find();
 
-const users = await User.find()
-
-res.status(200).send({status:true , users})
-
-}catch(err){
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-
-}
-
+    res.status(200).send({ status: true, users });
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 //=============================== get Single  User (admin) ====================
-exports.getSingleUser = async (req,res,next)=>{
-    try{
-    
-    const user = await User.findById(req.params.id)
-    
-    if(!user){
-        return next (new ErrorHandler(`User does not exist with id:${req.params.id}`))
+exports.getSingleUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return next(
+        new ErrorHandler(`User does not exist with id:${req.params.id}`)
+      );
     }
 
-    
-
-    res.status(200).send({status:true , user})
-    
-    }catch(err){
-     
-        res.status(500).send({status:false , message:err.message})
-    
-    }
-    
-    }
-    
-
-
-
-
+    res.status(200).send({ status: true, user });
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 //==================== Update user  Role (admin)=======================
 
-exports.updateUserRole = async (req,res,next) =>{
-    try{
+exports.updateUserRole = async (req, res, next) => {
+  try {
+    let data = req.body;
+    let { name, email, role } = data;
 
-        let data = req.body
-        let {name , email, role} = data
-            
-        const newUserData = {
-            name:name,
-            email:email,
-            role:role
-        }
-              // we will add cloudinary later  
-              
-        const checkEmail = await User.findOne({email:email})
-        if(checkEmail){
-            return next(new ErrorHandler("This Email is already exist", 400))
-        }
+    const newUserData = {
+      name: name,
+      email: email,
+      role: role,
+    };
+    // we will add cloudinary later
 
-const user = await User.findByIdAndUpdate(req.user.id, newUserData, {new:true, runValidators:true, useFindAndModify:false,})
+    const checkEmail = await User.findOne({ email: email });
+    if (checkEmail) {
+      return next(new ErrorHandler("This Email is already exist", 400));
+    }
 
-res.status(200).send({status:true})
+    const user = await User.findByIdAndUpdate(req.user.id, newUserData, {
+      new: true,
+      runValidators: true,
+      useFindAndModify: false,
+    });
 
-    }catch(err){
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-
-}
-
-
-
-
+    res.status(200).send({ status: true });
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};
 
 //==================== Delete user  (admin)=======================
 
-exports.deleteUser = async (req,res,next) =>{
-    try{
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    //we will remove cloudinary later
+    if (!user) {
+      return next(
+        new ErrorHandler(`User does not exist with id:${req.params.id}`)
+      );
+    }
+    const imageId = user.avatar.public_id;
 
-const user = await User.findById(req.params.id)
-//we will remove cloudinary later
-if(!user){
-    return next (new ErrorHandler(`User does not exist with id:${req.params.id}`))
-}
-await User.findByIdAndDelete(req.params.id)
+    await cloudinary.v2.uploader.destroy(imageId);
 
+    await User.findByIdAndDelete(req.params.id);
 
-res.status(200).send({status:true, message:"User Deletted Successfully "  })
-
-    }catch(err){
-
-    res.status(500).send({status:false , message:err.message})
-
-}
-
-}
-
-
+    res
+      .status(200)
+      .send({ status: true, message: "User Deletted Successfully " });
+  } catch (err) {
+    res.status(500).send({ status: false, message: err.message });
+  }
+};

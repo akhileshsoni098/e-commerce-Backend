@@ -1,6 +1,7 @@
 
 //========================= Routes for Products ====================================================
 
+
 const express = require("express")
 
 const { getAllProducts, createProduct, updateProduct,deleteProduct, getProductDetails, createProductReview, getProductReviews, deleteReview } = require("../controllers/productController")
@@ -10,14 +11,13 @@ const { isAuthenticatedUser, authorizeRoles } = require("../middleware/auth")
 const router = express.Router()
 
 
-
 //======================================= create product (Admin) =======================================================
 
 router.route("/product/new").post( isAuthenticatedUser, authorizeRoles("admin") , createProduct)
 
 //====================================== get product ============================================================
 
-router.route("/product").get(isAuthenticatedUser, getAllProducts)
+router.route("/products").get(getAllProducts)
 
 //======================================== update product (admin) =======================================================
 

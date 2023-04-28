@@ -34,7 +34,7 @@ router.route("/logout").get(logout)
 
 router.route("/me").get( isAuthenticatedUser, getUserDetails)
 
-// ======================== update password ===========
+// ======================== update password ===============
 
 router.route("/password/update").put(isAuthenticatedUser, updatePassword)
 
@@ -46,12 +46,13 @@ router.route("/me/update").put(isAuthenticatedUser, updateProfile)
 router.route("/admin/users").get(isAuthenticatedUser,authorizeRoles("admin"), getAllUser)
 
 // ======= get single User ===========================
+
 router.route("/admin/user/:id").get(isAuthenticatedUser,authorizeRoles("admin"), getSingleUser)
 
 // ============= user update role (admin) ======================
 router.route("/admin/user/:id").put(isAuthenticatedUser,authorizeRoles("admin"), updateUserRole)
 
-//============ delete user (admin)
+//============ delete user (admin) ========
 
 router.route("/admin/user/:id").delete(isAuthenticatedUser,authorizeRoles("admin"), deleteUser)
 
